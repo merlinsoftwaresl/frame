@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Client</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        img {
+            max-width: 90%;
+            max-height: 90%
+            border: 2px solid #fff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <img id="image-display" src="" alt="Awaiting Image" />
+    <script>
+        const socket = new WebSocket("ws://localhost:8080");
+        const imgElement = document.getElementById("image-display");
+
+        socket.onopen = () => {
+            console.log("WebSocket connection established.");
+        };
+
+        socket.onmessage = (event) => {
+            console.log("Image received");
+            // TODO check if image is valid 
+            imgElement.src = event.data;
+        };
+
+        socket.onclose = () => {
+            console.log("WebSocket connection closed.");
+        };
+
+        socket.onerror = (error) => {
+            console.error("WebSocket error:", error);
+        };
+    </script>
+</body>
+</html>
