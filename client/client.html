@@ -36,39 +36,48 @@
         <img id="image-1" src="" alt="Awaiting Image" />
     </div>
     <script>
-        const socket = new WebSocket("ws://localhost:8080");
         const img0 = document.getElementById("image-0");
         const img1 = document.getElementById("image-1");
         let activeImage = img0;
 
-        socket.onopen = () => {
-            console.log("WebSocket connection established.");
-        };
+        function connectWebsocket() {
+            const socket = new WebSocket("ws://localhost:8080");
 
-        socket.onmessage = (event) => {
-            console.log("Image received");
-            // TODO check if image is valid 
-            fadeTransition(event.data);
-        };
+            socket.onopen = () => {
+                console.log("WebSocket connection established.");
+            };
 
-        socket.onclose = () => {
-            console.log("WebSocket connection closed.");
-        };
+            socket.onmessage = (event) => {
+                console.log("Image received");
+                // TODO check if image is valid 
+                fadeTransition(event.data);
+            };
 
-        socket.onerror = (error) => {
-            console.error("WebSocket error:", error);
-        };
+            socket.onclose = () => {
+                console.log("WebSocket connection closed.");
+                if (!event.wasClean) {
+                    console.log("Attempting to reconnect...");
+                    setTimeout(connectWebsocket, 5000); // Reconnect after 5s
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket error:", error);
+            };
+
+            return socket;
+        }
+        let socket = connectWebsocket();
 
         function fadeTransition(newSrc) {
-            const inactiveImage = activeImage === img0 ? img1 : img0;
-
-            inactiveImage.src = newSrc;
+            const inactiveImage = activeImage === img0 ? img1 : img0; 
+              inactiveImage.src = newSrc;
             inactiveImage.onload = () => {
                 activeImage.classList.remove('active');
                 inactiveImage.classList.add('active');
                 activeImage = inactiveImage;
             };
-      }
-    </script>
+        }
+  </script>
 </body>
 </html>
