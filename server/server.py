@@ -5,6 +5,7 @@ import os
 from collections import deque
 
 image_queue = deque()
+image_map = {} 
 
 def load_images_from_folder(folder_path="assets"):
     if not os.path.exists(folder_path):
@@ -19,18 +20,19 @@ def load_images_from_folder(folder_path="assets"):
                 file_extension = os.path.splitext(filename)[1][1:].lower()
                 encoded_image = f"data:image/{file_extension};base64,{base64.b64encode(image_file.read()).decode()}"
                 image_queue.append(encoded_image)
+                image_map[filename] = encoded_image
                 print(f"Image enqueued: {filename}")
 
-async def send_image(websocket):
+async def send_image(websocket, image_data):
         try:
-            image_data = image_queue[0]
             await websocket.send(image_data)
             print("Image sent.")
 
             ack = await asyncio.wait_for(websocket.recv(), timeout=5)
             if ack == "ACK":
                 print("Acknowledgment received from client.")
-                image_queue.popleft()
+                if image_data in image_queue:
+                    image_queue.popleft()
             else:
                 print(f"Unexpected acknowledgment: {ack}")
 
@@ -49,7 +51,14 @@ async def handle_client(websocket, path):
                     print("Image queue empty. Reloading...")
                     load_images_from_folder()
                 if image_queue:
-                    await send_image(websocket)
+                    await send_image(websocket, image_queue[0])
+            elif message.startswith("REQUEST:"):
+                filename = message.split(":", 1)[1]
+                if filename in image_map:
+                    await send_image(websocket, image_map[filename])
+                else:
+                    print(f"Requested image not found: {filename}")
+                    await websocket.send("ERROR: Image not found")
         except websockets.exceptions.ConnectionClosedError:
             print("Connection lost. Waiting for client to reconnect...")
             break
