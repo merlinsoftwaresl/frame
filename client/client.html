@@ -31,6 +31,13 @@
     </style>
 </head>
 <body>
+    <div class="controls">
+        <button id="toggleMode">Switch to Manual Mode</button>
+        <div id="manualMode" style="display: none;">
+            <input type="text" id="imageInput" placeholder="Enter image filename">
+            <button id="requestImage">Request Image</button>
+        </div>
+    </div>
     <div class="img-container">
         <img id="image-0" src="" alt="Awaiting Image" class="active" />
         <img id="image-1" src="" alt="Awaiting Image" />
@@ -42,20 +49,20 @@
         let socket;
         let carouselInterval;
 
+        let isCarouselMode = true;
+        const toggleButton = document.getElementById("toggleMode");
+        const manualModeDiv = document.getElementById("manualMode");
+        const imageInput = document.getElementById("imageInput");
+        const requestImageButton = document.getElementById("requestImage");
+
         function connectWebsocket() {
             socket = new WebSocket("ws://localhost:8080");
 
             socket.onopen = () => {
                 console.log("WebSocket connection established.");
-
-                //carousel logic
-                socket.send("REQUEST_IMAGE");
-
-                carouselInterval = setInterval(() => {
-                    if (socket.readyState === WebSocket.OPEN) {
-                        socket.send("REQUEST_IMAGE");
-                    }
-                }, 5000) // 5s timer 
+                if(isCarouselMode) {
+                    startCarousel();
+                }
             };
 
             socket.onmessage = (event) => {
@@ -93,6 +100,41 @@
         }
         connectWebsocket();
 
+        function startCarousel() {
+            if (socket.readyState === WebSocket.OPEN){
+                socket.send("REQUEST_IMAGE");
+            }
+            carouselInterval = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send("REQUEST_IMAGE");
+                }
+            }, 5000) // 5s timer 
+        }
+
+        function stopCarousel() {
+            clearInterval(carouselInterval);
+        }
+
+        toggleButton.addEventListener("click", () => {
+            isCarouselMode = !isCarouselMode;
+            if (isCarouselMode) {
+                toggleButton.textContent = "Switch to Manual Mode";
+                manualModeDiv.style.display = "none";
+                startCarousel();
+            } else {
+                toggleButton.textContent = "Switch to Carousel Mode";
+                manualModeDiv.style.display = "block";
+                stopCarousel();
+            }
+        });
+
+        requestImageButton.addEventListener("click", () => {
+            const filename = imageInput.value.trim();
+            if (filename && socket.readyState === WebSocket.OPEN){
+                socket.send(`REQUEST:${filename}`);
+            }
+        });
+        
         function fadeTransition(newSrc) {
             const inactiveImage = activeImage === img0 ? img1 : img0; 
             inactiveImage.src = newSrc;
